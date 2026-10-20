@@ -165,7 +165,10 @@ img, video { display: block; max-width: 100%; }
 
 .tile-dots h2 {
   margin: 0 0 12px;
-  font-size: 30px;
+  /* The second line sits within ~1px of the tile's inner width at 30px, so
+     any font with slightly wider metrics orphans "it." onto a third line.
+     Track the available width instead and cap at the intended size. */
+  font-size: min(30px, calc(9.3vw - 6px));
   font-weight: 700;
   line-height: 1.12;
   letter-spacing: -0.028em;
