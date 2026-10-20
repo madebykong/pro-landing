@@ -1,0 +1,6 @@
+# Söhne is licensed from Klim Type Foundry and is not redistributable.
+# The weights and the @font-face stylesheet that points at them stay local;
+# the published site falls back to the stack declared in index.html.
+assets/fonts/
+
+.DS_Store
