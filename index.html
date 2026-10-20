@@ -184,7 +184,7 @@ img, video { display: block; max-width: 100%; }
 
 /* ====================================================== 3 / PILLAR CARD */
 .pillars {
-  --p: 0;
+  /* No --p here: this track drives a row index in JS, not CSS interpolation. */
   margin-top: var(--gutter);
   height: calc(var(--stage) * 3);
   position: relative;
@@ -435,9 +435,19 @@ img, video { display: block; max-width: 100%; }
   function progress(section) {
     var stage  = section.firstElementChild;
     var pin    = parseFloat(getComputedStyle(stage).top) || 0;
-    var travel = section.offsetHeight - stage.offsetHeight;
+    var rect   = section.getBoundingClientRect();
+
+    /* A section further down the page scrolls up to `pin` before its stage
+       catches; one at the very top of the document never gets to, since
+       there is nothing above it — it is already pinned at scroll 0. Taking
+       the smaller of the two starts the track where the section really
+       begins, instead of counting the pin offset as progress already made. */
+    var start  = Math.min(rect.top + window.scrollY, pin);
+    var end    = pin + stage.offsetHeight - section.offsetHeight;
+    var travel = start - end;
+
     if (travel <= 0) return 0;
-    return Math.min(1, Math.max(0, (pin - section.getBoundingClientRect().top) / travel));
+    return Math.min(1, Math.max(0, (start - rect.top) / travel));
   }
 
   function setActive(i) {
