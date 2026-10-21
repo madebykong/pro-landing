@@ -518,6 +518,7 @@ img, video { display: block; max-width: 100%; }
   var canvas = document.getElementById("dotCanvas");
   var ctx    = canvas.getContext("2d");
   var COLS   = 16;
+  var DOT    = 2;            // diameter in CSS px
   var w = 0, h = 0, raf = 0, visible = false;
 
   function size() {
@@ -548,7 +549,6 @@ img, video { display: block; max-width: 100%; }
     var gx   = w / COLS;
     var rows = Math.max(4, Math.round(h / gx));
     var gy   = h / rows;
-    var base = Math.max(1.4, gx * 0.095);
 
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < COLS; c++) {
@@ -558,7 +558,7 @@ img, video { display: block; max-width: 100%; }
         // Nearly out to fully solid — the fade is the whole effect.
         ctx.globalAlpha = 0.2 + 0.8 * pulse;
         ctx.beginPath();
-        ctx.arc(gx * (c + 0.5), gy * (r + 0.5), base, 0, 6.2832);
+        ctx.arc(gx * (c + 0.5), gy * (r + 0.5), DOT / 2, 0, 6.2832);
         ctx.fill();
       }
     }
