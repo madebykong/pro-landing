@@ -442,12 +442,12 @@ img, video { display: block; max-width: 100%; }
        there is nothing above it — it is already pinned at scroll 0. Taking
        the smaller of the two starts the track where the section really
        begins, instead of counting the pin offset as progress already made. */
-    var start  = Math.min(rect.top + window.scrollY, pin);
-    var end    = pin + stage.offsetHeight - section.offsetHeight;
-    var travel = start - end;
+    var from   = Math.min(rect.top + window.scrollY, pin);
+    var to     = pin + stage.offsetHeight - section.offsetHeight;
+    var travel = from - to;
 
     if (travel <= 0) return 0;
-    return Math.min(1, Math.max(0, (start - rect.top) / travel));
+    return Math.min(1, Math.max(0, (from - rect.top) / travel));
   }
 
   function setActive(i) {
@@ -522,7 +522,7 @@ img, video { display: block; max-width: 100%; }
   var RINGS  = [8, 6, 4];          // diameters under the pointer, ring by ring
   var EASE   = 0.18;               // fraction of the gap closed each frame
 
-  var w = 0, h = 0, gx = 0, gy = 0, rows = 0;
+  var w = 0, h = 0, gx = 0, gy = 0, gridRows = 0;
   var sizes = null;                // eased diameter, one per dot
   var raf = 0, visible = false;
   var ptrX = -1, ptrY = -1;        // client coords; -1 means no pointer
@@ -539,11 +539,11 @@ img, video { display: block; max-width: 100%; }
     /* Rows follow from the column pitch, so the lattice stays square
        whatever height the tile ends up with. */
     gx   = w / COLS;
-    rows = Math.max(4, Math.round(h / gx));
-    gy   = h / rows;
+    gridRows = Math.max(4, Math.round(h / gx));
+    gy       = h / gridRows;
 
-    if (!sizes || sizes.length !== COLS * rows) {
-      sizes = new Float32Array(COLS * rows);
+    if (!sizes || sizes.length !== COLS * gridRows) {
+      sizes = new Float32Array(COLS * gridRows);
       for (var i = 0; i < sizes.length; i++) sizes[i] = DOT;
     }
   }
@@ -574,7 +574,7 @@ img, video { display: block; max-width: 100%; }
 
     var ease = reduced ? 1 : EASE;
 
-    for (var r = 0; r < rows; r++) {
+    for (var r = 0; r < gridRows; r++) {
       for (var c = 0; c < COLS; c++) {
         var i = r * COLS + c;
         var target = DOT;
