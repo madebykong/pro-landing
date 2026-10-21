@@ -514,12 +514,18 @@ img, video { display: block; max-width: 100%; }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitPro);
   addEventListener("resize", fitPro);
 
-  /* ------------------------------------------------- dot grid with wave */
+  /* ---------------------------------- dot grid: shimmer + pointer swell */
   var canvas = document.getElementById("dotCanvas");
   var ctx    = canvas.getContext("2d");
   var COLS   = 16;
-  var DOT    = 2;            // diameter in CSS px
-  var w = 0, h = 0, raf = 0, visible = false;
+  var DOT    = 2;                  // resting diameter in CSS px
+  var RINGS  = [8, 6, 4];          // diameters under the pointer, ring by ring
+  var EASE   = 0.18;               // fraction of the gap closed each frame
+
+  var w = 0, h = 0, gx = 0, gy = 0, rows = 0;
+  var sizes = null;                // eased diameter, one per dot
+  var raf = 0, visible = false;
+  var ptrX = -1, ptrY = -1;        // client coords; -1 means no pointer
 
   function size() {
     var dpr  = Math.min(devicePixelRatio || 1, 2);
@@ -529,6 +535,17 @@ img, video { display: block; max-width: 100%; }
     canvas.width  = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    /* Rows follow from the column pitch, so the lattice stays square
+       whatever height the tile ends up with. */
+    gx   = w / COLS;
+    rows = Math.max(4, Math.round(h / gx));
+    gy   = h / rows;
+
+    if (!sizes || sizes.length !== COLS * rows) {
+      sizes = new Float32Array(COLS * rows);
+      for (var i = 0; i < sizes.length; i++) sizes[i] = DOT;
+    }
   }
 
   /* Deterministic noise, so a dot keeps the same phase and speed frame to
@@ -538,27 +555,48 @@ img, video { display: block; max-width: 100%; }
     return n - Math.floor(n);
   }
 
-  /* Each dot fades on its own clock, at a fixed size. No travelling crest:
-     the field just shimmers, every dot somewhere else in its cycle. */
+  /* Each dot fades on its own clock at the resting size. Under the pointer
+     the nearest dot swells to RINGS[0] and the rings around it follow, each
+     dot easing toward whatever size it is owed — so the swell trails the
+     cursor instead of snapping to it. */
   function paint(t) {
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = "#000";
 
-    /* Rows follow from the column pitch, so the lattice stays square
-       whatever height the tile ends up with. */
-    var gx   = w / COLS;
-    var rows = Math.max(4, Math.round(h / gx));
-    var gy   = h / rows;
+    /* Resolve the pointer once per frame rather than per dot. Reading the
+       box here also means a scroll moves the hot spot for free. */
+    var hot = ptrX >= 0, hotC = 0, hotR = 0;
+    if (hot) {
+      var box = canvas.getBoundingClientRect();
+      hotC = Math.round((ptrX - box.left) / gx - 0.5);
+      hotR = Math.round((ptrY - box.top)  / gy - 0.5);
+    }
+
+    var ease = reduced ? 1 : EASE;
 
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < COLS; c++) {
-        var speed = 0.45 + hash(c, r) * 0.9;
-        var pulse = 0.5 + 0.5 * Math.sin(hash(r, c) * 6.2832 + t * 0.0016 * speed);
+        var i = r * COLS + c;
+        var target = DOT;
+
+        if (hot) {
+          /* Ring by straight-line distance in grid cells, so the swell
+             reads as a circle rather than a square block. */
+          var dc = c - hotC, dr = r - hotR;
+          var ring = Math.round(Math.sqrt(dc * dc + dr * dr));
+          if (ring < RINGS.length) target = RINGS[ring];
+        }
+
+        sizes[i] += (target - sizes[i]) * ease;
+
+        var pulse = reduced ? 1
+          : 0.5 + 0.5 * Math.sin(hash(r, c) * 6.2832
+                                 + t * 0.0016 * (0.45 + hash(c, r) * 0.9));
 
         // Nearly out to fully solid — the fade is the whole effect.
         ctx.globalAlpha = 0.2 + 0.8 * pulse;
         ctx.beginPath();
-        ctx.arc(gx * (c + 0.5), gy * (r + 0.5), DOT / 2, 0, 6.2832);
+        ctx.arc(gx * (c + 0.5), gy * (r + 0.5), sizes[i] / 2, 0, 6.2832);
         ctx.fill();
       }
     }
@@ -567,8 +605,23 @@ img, video { display: block; max-width: 100%; }
 
   function loop(t) { paint(t); raf = requestAnimationFrame(loop); }
 
-  function start() { if (!raf) raf = requestAnimationFrame(loop); }
+  function start() { if (!raf && !reduced) raf = requestAnimationFrame(loop); }
   function stop()  { cancelAnimationFrame(raf); raf = 0; }
+
+  /* With reduced motion there is no loop running to notice the pointer, so
+     those events repaint directly — and `ease` of 1 lands it in one go. */
+  function nudge() { if (reduced) paint(0); }
+
+  function track(e) { ptrX = e.clientX; ptrY = e.clientY; nudge(); }
+  function clear()  { ptrX = -1; ptrY = -1; nudge(); }
+
+  canvas.addEventListener("pointermove",   track, { passive: true });
+  canvas.addEventListener("pointerdown",   track, { passive: true });
+  canvas.addEventListener("pointerleave",  clear, { passive: true });
+  canvas.addEventListener("pointercancel", clear, { passive: true });
+  canvas.addEventListener("pointerup", function (e) {
+    if (e.pointerType !== "mouse") clear();   // a finger leaves no cursor behind
+  }, { passive: true });
 
   size();
   if (reduced) {
