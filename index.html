@@ -253,6 +253,11 @@ img, video { display: block; max-width: 100%; }
 /* Collapsed rows sit at their content height; the open one grows into all
    the slack that leaves, so the card is never evenly divided. */
 .pillar {
+  /* The body is indented past these to line up with the label, so the two
+     live here rather than being repeated as a magic number below. */
+  --icon: 15px;
+  --icon-gap: 11px;
+
   flex: 0 1 auto;
   display: flex;
   flex-direction: column;
@@ -260,28 +265,34 @@ img, video { display: block; max-width: 100%; }
      foot of the span — and keeps it there while the row grows or collapses,
      which a state-dependent value could not do (it isn't animatable). */
   justify-content: flex-end;
-  padding-block: 15px;
+  /* Asymmetric: the text sits at the foot of the row, so the end padding is
+     the gap down to the next row's rule and carries more weight. */
+  padding-block-start: 20px;
+  padding-block-end: 26px;
   border-top: 1px solid rgba(255,255,255,.28);
-  transition: flex-grow 700ms var(--ease), padding-block 700ms var(--ease);
+  transition: flex-grow 700ms var(--ease),
+              padding-block-start 700ms var(--ease),
+              padding-block-end 700ms var(--ease);
 }
 
 .pillar:first-child { border-top: 0; }
 
 .pillar.is-open {
   flex-grow: 1;
-  padding-block: 24px;
+  padding-block-start: 28px;
+  padding-block-end: 34px;
 }
 
 .pillar__head {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: var(--icon-gap);
   margin-bottom: 7px;
 }
 
 .pillar__icon {
-  width: 15px;
-  height: 15px;
+  width: var(--icon);
+  height: var(--icon);
   flex: none;
   color: rgba(255,255,255,.42);
   transition: color 600ms var(--ease);
@@ -303,6 +314,8 @@ img, video { display: block; max-width: 100%; }
 
 .pillar__body {
   margin: 0;
+  /* Hangs off the label, not the icon. */
+  padding-left: calc(var(--icon) + var(--icon-gap));
   font-size: 17px;
   font-weight: 400;
   line-height: 1.34;
